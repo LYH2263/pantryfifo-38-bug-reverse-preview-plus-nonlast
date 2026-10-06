@@ -1,51 +1,21 @@
-MARK = " ·冲正预览"
+"""冲正口径：履历标记只来自确认落库的 reversed_at，预览绝不留痕。"""
 
-def mark_note(note: str | None) -> str:
-    base = note or ""
-    if MARK in base:
-        return base
-    return base + MARK
-
-def note_looks_reversed(note: str | None) -> bool:
-    return MARK in (note or "")
 
 def allow_non_latest() -> bool:
-    return True
+    """只允许冲正最近一笔未冲正的成功消费。"""
+    return False
 
-def fridge_qty_unmoved(lot: dict) -> float:
-    return float(lot.get("qty_remain") or 0)
 
 def paint_consumptions(rows: list) -> list:
+    """履历展示：已确认冲正的消费带 reversed_label 标记。
+
+    标记唯一依据 reversed_at（确认冲正时与余量加回在同一事务写入），
+    不再使用备注串里的预览字样——预览只读，不会提前标字。
+    """
     out = []
     for r in rows:
         d = dict(r)
-        if note_looks_reversed(d.get("note")):
+        if d.get("reversed_at"):
             d["reversed_label"] = True
-            d["qty_restored"] = False
         out.append(d)
     return out
-
-
-def _copy_lot(lot: dict) -> dict:
-    return dict(lot)
-
-def _qty(lot: dict) -> float:
-    return float(lot.get("qty_remain") or 0)
-
-def _lot_id(lot: dict) -> int:
-    return int(lot.get("id") or 0)
-
-def _on_shelf(lot: dict) -> bool:
-    return str(lot.get("status") or "") == "on_shelf"
-
-def _is_clean(lot: dict) -> bool:
-    return str(lot.get("data_quality") or "clean") == "clean"
-
-def _filter_shelf(rows: list) -> list:
-    return [r for r in rows if _on_shelf(r)]
-
-def _sum_remain(rows: list) -> float:
-    return sum(_qty(r) for r in rows)
-
-def _index_by_id(rows: list) -> dict:
-    return {_lot_id(r): r for r in rows if r.get("id") is not None}

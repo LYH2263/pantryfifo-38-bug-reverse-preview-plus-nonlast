@@ -260,9 +260,7 @@ def reverse_preview(body: ReverseIn):
         if not plan["ok"]:
             return {"target": target, "valid": False, "error": plan["reason"],
                     "latest_reversible_id": latest, "restorations": []}
-        c.execute("UPDATE consumptions SET note=? WHERE id=?",
-                  (reverse_mark.mark_note(row.get("note")), row["id"]))
-        c.commit()
+        # 纯只读预览：不动余量、不动履历备注；确认才在一个事务里同时落加回与冲正字。
         return {"target": target, "valid": True, "error": None,
                 "latest_reversible_id": latest, "restorations": plan["restorations"]}
     finally:
@@ -288,6 +286,9 @@ def reverse(body: ReverseIn):
             raise HTTPException(409, plan["reason"])
         restorations = plan["restorations"]
         target_id, item_id = row["id"], row["item_id"]
+        if item_id is None and deductions:
+            lr = c.execute("SELECT item_id FROM lots WHERE id=?", (deductions[0]["lot_id"],)).fetchone()
+            item_id = lr["item_id"] if lr else None
         now = datetime.now(timezone.utc).isoformat()
         for rst in restorations:
             c.execute("UPDATE lots SET qty_remain=?, status=? WHERE id=?",

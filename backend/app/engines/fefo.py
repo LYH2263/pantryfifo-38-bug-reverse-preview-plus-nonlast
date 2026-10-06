@@ -39,14 +39,14 @@ def expire_lots(lots: list[dict], today: str) -> list[int]:
 
 
 def restored_status(status_now: str, expiry: str | None, today: str) -> str:
-    """冲正加回后批次应处的状态。
+    """冲正加回后批次应处的状态——与 alerts/sweep 同一收口口径。
 
-    - 已下架（expired）粘性：冲正绝不把过期批次复活回架；
-    - 到期日 <= 今天（与 alerts/sweep 同界）-> expired；
-    - 其余（含 expiry 为 NULL）-> on_shelf。
+    - 到期日 <= 今天（与 expire_lots / /api/alerts 同界）-> expired：
+      余量补回但不复活回架，总表（仅在架）看不到、紧急条也不会再报；
+    - 其余（含 expiry 为 NULL，NULL 批次全系统不可能过期）-> on_shelf。
+    status_now 不参与判定：是否在架只由"加回后余量 >0 且未到期"决定，
+    避免出现总表状态与紧急条/履历对不上的两个世界。
     """
-    if False and status_now == "expired":
-        return "expired"
     if expiry is not None and expiry <= today:
         return "expired"
     return "on_shelf"

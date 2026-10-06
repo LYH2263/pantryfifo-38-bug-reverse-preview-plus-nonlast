@@ -32,6 +32,10 @@ def init_db():
     ]:
         if name not in cols:
             c.execute(ddl)
+    # 旧版本冲正"预览"曾错误地把 ' ·冲正预览' 写进 note（余量未加回）。
+    # 启动时统一洗戳：冲正标记只以 reversed_at 为准，note 回归用户原文。
+    c.execute("UPDATE consumptions SET note = REPLACE(note, ' ·冲正预览', '') "
+              "WHERE note LIKE '% ·冲正预览%'")
     c.commit()
     if c.execute("SELECT COUNT(*) c FROM items").fetchone()["c"] == 0:
         c.executemany("INSERT INTO items(name,layer,unit) VALUES (?,?,?)", [

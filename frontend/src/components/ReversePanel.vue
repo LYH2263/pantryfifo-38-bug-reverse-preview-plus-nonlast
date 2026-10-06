@@ -20,9 +20,9 @@
           <td>{{ statusLabel(r.status_before) }} ×{{ r.qty_before }}</td>
           <td>+{{ r.take }}</td>
           <td>
-            <strong :class="{ 'st-expired': r.status_after === 'expired' }">{{ statusLabel(r.status_after) }}</strong>
+            <strong :class="{ 'st-expired': isExpired(r) }">{{ statusLabel(r.status_after) }}</strong>
             ×{{ r.qty_after }}
-            <div v-if="r.status_after === 'expired'" class="muted">已下架：余量补回但不回架</div>
+            <div v-if="isExpired(r)" class="muted">已到期：复活在架、上紧急条，后续消费先扣此批</div>
           </td>
         </tr>
       </tbody>
@@ -56,6 +56,11 @@ const canConfirm = computed(
 
 function statusLabel(s) {
   return { on_shelf: '在架', consumed: '已耗尽', expired: '已下架' }[s] || s
+}
+
+// status_after 现在一律为在架；"已到期"由 expiry 判定，与紧急条同界
+function isExpired(r) {
+  return !!r.expiry && r.expiry <= new Date().toISOString().slice(0, 10)
 }
 
 async function doPreview() {

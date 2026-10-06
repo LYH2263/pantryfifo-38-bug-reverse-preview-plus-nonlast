@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1>冰箱分层</h1>
-    <p class="muted">竖列分层 · FEFO 消费走「消费」页 · 履历先标冲正</p>
+    <p class="muted">竖列分层 · FEFO 消费走「消费」页 · 冲正确认后余量即时加回在架</p>
     <div class="fridge">
       <section v-for="L in layers" :key="L" class="shelf">
         <h3>{{ label[L] }}</h3>

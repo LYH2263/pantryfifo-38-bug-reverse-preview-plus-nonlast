@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from app import seed
 from app.db import connect
 from app.engines.fefo import consume_fefo, expire_lots, plan_restore
-from app.engines import reverse_mark
 
 app = FastAPI(title="Pantryfifo", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -158,10 +157,13 @@ def _get_target(c, consumption_id: int | None):
     return row, None
 
 def _target_error(row, c) -> str | None:
-    """锁内/即时重算：已冲正 or 已不是最近一笔。"""
+    """锁内/即时重算：已冲正 or 已不是最近一笔。
+
+    只有"最近一笔成功扣减"可冲——非最近一笔连预览都不给出 valid。
+    """
     if row["reversed_at"] is not None:
         return "already_reversed"
-    if (not reverse_mark.allow_non_latest()) and row["id"] != _latest_reversible_id(c):
+    if row["id"] != _latest_reversible_id(c):
         return "not_latest"
     return None
 
@@ -231,7 +233,7 @@ def consumptions():
             kind == "consume" and r.get("reversed_at") is None and r["id"] == latest_id
         )
         out.append(item)
-    return reverse_mark.paint_consumptions(out)
+    return out
 
 class ReverseIn(BaseModel):
     consumption_id: int | None = None
@@ -260,9 +262,6 @@ def reverse_preview(body: ReverseIn):
         if not plan["ok"]:
             return {"target": target, "valid": False, "error": plan["reason"],
                     "latest_reversible_id": latest, "restorations": []}
-        c.execute("UPDATE consumptions SET note=? WHERE id=?",
-                  (reverse_mark.mark_note(row.get("note")), row["id"]))
-        c.commit()
         return {"target": target, "valid": True, "error": None,
                 "latest_reversible_id": latest, "restorations": plan["restorations"]}
     finally:

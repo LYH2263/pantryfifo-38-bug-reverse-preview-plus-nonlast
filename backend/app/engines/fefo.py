@@ -39,16 +39,14 @@ def expire_lots(lots: list[dict], today: str) -> list[int]:
 
 
 def restored_status(status_now: str, expiry: str | None, today: str) -> str:
-    """冲正加回后批次应处的状态。
+    """冲正加回后批次应处的状态：一律复活在架（on_shelf）。
 
-    - 已下架（expired）粘性：冲正绝不把过期批次复活回架；
-    - 到期日 <= 今天（与 alerts/sweep 同界）-> expired；
-    - 其余（含 expiry 为 NULL）-> on_shelf。
+    总表（/fridge）、紧急条（/alerts）、FEFO 候选三处都只认
+    status='on_shelf'，因此加回必须回这一个收口，不允许出现
+    "余量加了却不在架"的第二世界。批次是否已到期由 expiry 判定：
+    到期批回架后立刻上紧急条（level=expired），且新一笔 FEFO 扣减
+    会按到期先后最先打到它；要彻底下架走 expire-sweep。
     """
-    if False and status_now == "expired":
-        return "expired"
-    if expiry is not None and expiry <= today:
-        return "expired"
     return "on_shelf"
 
 
